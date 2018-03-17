@@ -78,10 +78,11 @@ class InferenceWrapper():
     self.dumb_op = tf.no_op('dumb_operation')
 
   def build_inputs(self):
-    filename = tf.placeholder(tf.string, [], name='filename')
-    image_file = tf.read_file(filename)
-    image = tf.image.decode_jpeg(image_file, channels=3, dct_method="INTEGER_ACCURATE")
-    image = tf.to_float(image)
+    # filename = tf.placeholder(tf.string, [], name='filename')
+    # image_file = tf.read_file(filename)
+    # image = tf.image.decode_jpeg(image_file, channels=3, dct_method="INTEGER_ACCURATE")
+    image = tf.placeholder(tf.float32, shape=(None, None, 3), name="input")
+    # image = tf.to_float(image)
     self.image = image
     self.target_bbox_feed = tf.placeholder(dtype=tf.float32,
                                            shape=[4],
@@ -223,7 +224,7 @@ class InferenceWrapper():
   def initialize(self, sess, input_feed):
     image_path, target_bbox = input_feed
     scale_xs, _ = sess.run([self.scale_xs, self.init],
-                           feed_dict={'filename:0': image_path,
+                           feed_dict={'input:0': image_path,
                                       "target_bbox_feed:0": target_bbox, })
     return scale_xs
 
@@ -234,7 +235,7 @@ class InferenceWrapper():
     image_cropped, scale_xs, response_output = sess.run(
       fetches=[image_cropped_op, self.scale_xs, self.response_up],
       feed_dict={
-        "filename:0": image_path,
+        "input:0": image_path,
         "target_bbox_feed:0": target_bbox, })
 
     output = {
