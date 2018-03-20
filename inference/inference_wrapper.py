@@ -39,6 +39,7 @@ class InferenceWrapper():
     self.model_config = None
     self.track_config = None
     self.response_up = None
+    self.debug = '123'
 
   def build_graph_from_config(self, model_config, track_config, checkpoint_path):
     """Build the inference graph and return a restore function."""
@@ -122,37 +123,77 @@ class InferenceWrapper():
     base_s_x = base_s_z + 2 * base_pad
     base_scale_x = tf.div(tf.to_float(size_x), base_s_x)
 
+    # Note we use different padding values for each image
+    # while the original implementation uses only the average value
+    # of the first image for all images.
+    image_minus_avg = self.image - avg_chan
+
     boxes = []
+    image_cropped = []
+
+    def pad_frame(im, frame_sz, topleft, bottomright):
+      xleft_pad = tf.maximum(0, -tf.cast(tf.round(topleft[1]), tf.int32))
+      ytop_pad = tf.maximum(0, -tf.cast(tf.round(topleft[0]), tf.int32))
+      xright_pad = tf.maximum(0, tf.cast(tf.round(bottomright[1]), tf.int32) - frame_sz[1])
+      ybottom_pad = tf.maximum(0, tf.cast(tf.round(bottomright[0]), tf.int32) - frame_sz[0])
+      npad = tf.reduce_max([xleft_pad, ytop_pad, xright_pad, ybottom_pad])
+      paddings = [[npad, npad], [npad, npad], [0, 0]]
+      im_padded = im
+      im_padded = im_padded - avg_chan
+      im_padded = tf.pad(im_padded, paddings, mode='CONSTANT')
+      return im_padded, npad
+
+    def extract_crops(im, npad, topleft, bottomright):
+      # get top-right corner of bbox and consider padding
+      tr_x = npad + tf.cast(tf.round(topleft[1]), tf.int32)
+      # Compute size from rounded co-ords to ensure rectangle lies inside padding.
+      tr_y = npad + tf.cast(tf.round(topleft[0]), tf.int32)
+      width = tf.round(bottomright[1]) - tf.round(topleft[1])
+      height = tf.round(bottomright[0]) - tf.round(topleft[0])
+      crop = tf.image.crop_to_bounding_box(im,
+                                           tf.cast(tr_y, tf.int32),
+                                           tf.cast(tr_x, tf.int32),
+                                           tf.cast(height, tf.int32),
+                                           tf.cast(width, tf.int32))
+      # crop = tf.image.resize_images(crop, [sz_dst, sz_dst], method=tf.image.ResizeMethod.BILINEAR)
+      # crops = tf.expand_dims(crop, axis=0)
+      return crop
+
     for factor in search_factors:
       s_x = factor * base_s_x
-      frame_sz_1 = tf.to_float(frame_sz[0:2] - 1)
-      topleft = tf.div(target_yx - get_center(s_x), frame_sz_1)
-      bottomright = tf.div(target_yx + get_center(s_x), frame_sz_1)
-      box = tf.concat([topleft, bottomright], axis=0)
-      boxes.append(box)
-    boxes = tf.stack(boxes)
+      frame_sz = tf.to_int32(frame_sz[0:2])
+      topleft = target_yx - get_center(s_x)
+      bottomright = target_yx + get_center(s_x)
+      # box = tf.concat([topleft, bottomright], axis=0)
+      image_crop,npad = pad_frame(image_minus_avg,frame_sz,topleft,bottomright)
+      image_crop = extract_crops(image_crop,npad,topleft,bottomright)
+      # image_crop = tf.expand_dims(image_crop, axis=0)
+      image_crop = tf.image.resize_images(image_crop, [size_x, size_x], method=tf.image.ResizeMethod.BILINEAR)
 
+      image_cropped.append(image_crop)
+      # self.debug = box
+      # image_cropped.append(image_crop[1:3])
+      # boxes.append(box)
+    # boxes = tf.stack(boxes)
+    image_cropped = tf.stack(image_cropped)
+
+    # image_cropped = tf.image.crop_and_resize(image_minus_avg, boxes,
+    #                                          box_ind=tf.zeros((track_config['num_scales']), tf.int32),
+    #                                          crop_size=[size_x, size_x])
     scale_xs = []
     for factor in search_factors:
       scale_x = base_scale_x / factor
       scale_xs.append(scale_x)
-    self.scale_xs = tf.stack(scale_xs)
+    self.scale_xs = tf.stack(scale_xs, name='out_scale_xs')
 
-    # Note we use different padding values for each image
-    # while the original implementation uses only the average value
-    # of the first image for all images.
-    image_minus_avg = tf.expand_dims(self.image - avg_chan, 0)
-    image_cropped = tf.image.crop_and_resize(image_minus_avg, boxes,
-                                             box_ind=tf.zeros((track_config['num_scales']), tf.int32),
-                                             crop_size=[size_x, size_x])
-    self.search_images = image_cropped + avg_chan
+    self.debug = image_cropped
+    self.search_images = tf.add(image_cropped, avg_chan, name="out_search_images")
 
   def get_image_embedding(self, images, reuse=None):
     config = self.model_config['embed_config']
     arg_scope = convolutional_alexnet_arg_scope(config,
                                                 trainable=config['train_embedding'],
                                                 is_training=False)
-
     @functools.wraps(convolutional_alexnet)
     def embedding_fn(images, reuse=False):
       with slim.arg_scope(arg_scope):
@@ -181,7 +222,7 @@ class InferenceWrapper():
                                 initializer=tf.zeros(templates.get_shape().as_list(), dtype=templates.dtype),
                                 trainable=False)
         with tf.control_dependencies([templates]):
-          self.init = tf.assign(state, templates, validate_shape=True)
+          self.init = tf.assign(state, templates, validate_shape=True, name='out_init')
         self.templates = state
 
   def build_detection(self):
@@ -218,7 +259,7 @@ class InferenceWrapper():
                                            up_size,
                                            method=up_method,
                                            align_corners=True)
-      response_up = tf.squeeze(response_up, [3])
+      response_up = tf.squeeze(response_up, [3], name="out_response_up")
       self.response_up = response_up
 
   def initialize(self, sess, input_feed):

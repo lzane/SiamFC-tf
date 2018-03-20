@@ -31,6 +31,7 @@ class SiameseTracker:
     def __init__(self):
         checkpoint = 'SiamFC/Logs/SiamFC/track_model_checkpoints/SiamFC-3s-color-pretrained'
         os.environ['CUDA_VISIBLE_DEVICES'] = auto_select_gpu()
+        # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
         model_config, _, track_config = load_cfgs(checkpoint)
         track_config['log_level'] = 1
@@ -47,6 +48,7 @@ class SiameseTracker:
         gpu_options = tf.GPUOptions(allow_growth=True)
         sess_config = tf.ConfigProto(gpu_options=gpu_options)
         sess = tf.Session(graph=g, config=sess_config)
+        # sess.run(tf.global_variables_initializer())
         restore_fn(sess)
         tracker = Tracker(model, model_config=model_config, track_config=track_config)
         video_name = "Camera"
@@ -55,6 +57,7 @@ class SiameseTracker:
         self.tracker = tracker
         self.sess = sess
         self.video_log_dir = video_log_dir
+        self.graph = g
 
     def set_first_frame(self, frame, r):
         first_line = "{},{},{},{}".format(r[0], r[1], r[2], r[3])
