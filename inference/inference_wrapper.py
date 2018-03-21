@@ -128,7 +128,7 @@ class InferenceWrapper():
         image_minus_avg = self.image - avg_chan
 
         # for original implementation, fail on TX2
-
+        #
         # image_minus_avg = tf.expand_dims(image_minus_avg, 0)
         # boxes = []
         # for factor in search_factors:
@@ -139,6 +139,9 @@ class InferenceWrapper():
         #     box = tf.concat([topleft, bottomright], axis=0)
         #     boxes.append(box)
         # boxes = tf.stack(boxes)
+        # image_cropped = tf.image.crop_and_resize(image_minus_avg, boxes,
+        #                                          box_ind=tf.zeros((track_config['num_scales']), tf.int32),
+        #                                          crop_size=[size_x, size_x])
 
 
         def pad_frame(im, frame_sz, topleft, bottomright):
