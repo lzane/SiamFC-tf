@@ -138,7 +138,6 @@ class InferenceWrapper():
             npad = tf.reduce_max([xleft_pad, ytop_pad, xright_pad, ybottom_pad])
             paddings = [[npad, npad], [npad, npad], [0, 0]]
             im_padded = im
-            im_padded = im_padded - avg_chan
             im_padded = tf.pad(im_padded, paddings, mode='CONSTANT')
             return im_padded, npad
 
