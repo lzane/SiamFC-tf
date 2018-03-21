@@ -38,7 +38,7 @@ class InferenceWrapper():
         self.model_config = None
         self.track_config = None
         self.response_up = None
-        self.debug = '123'
+        self.debug = None
 
     def build_graph_from_config(self, model_config, track_config, checkpoint_path):
         """Build the inference graph and return a restore function."""
@@ -127,8 +127,19 @@ class InferenceWrapper():
         # of the first image for all images.
         image_minus_avg = self.image - avg_chan
 
-        boxes = []
-        image_cropped = []
+        # for original implementation, fail on TX2
+
+        # image_minus_avg = tf.expand_dims(image_minus_avg, 0)
+        # boxes = []
+        # for factor in search_factors:
+        #     s_x = factor * base_s_x
+        #     frame_sz_1 = tf.to_float(frame_sz[0:2] - 1)
+        #     topleft = tf.div(target_yx - get_center(s_x), frame_sz_1)
+        #     bottomright = tf.div(target_yx + get_center(s_x), frame_sz_1)
+        #     box = tf.concat([topleft, bottomright], axis=0)
+        #     boxes.append(box)
+        # boxes = tf.stack(boxes)
+
 
         def pad_frame(im, frame_sz, topleft, bottomright):
             xleft_pad = tf.maximum(0, -tf.cast(tf.round(topleft[1]), tf.int32))
@@ -138,7 +149,7 @@ class InferenceWrapper():
             npad = tf.reduce_max([xleft_pad, ytop_pad, xright_pad, ybottom_pad])
             paddings = [[npad, npad], [npad, npad], [0, 0]]
             im_padded = im
-            im_padded = tf.pad(im_padded, paddings, mode='CONSTANT')
+            im_padded = tf.pad(im_padded, paddings, mode='CONSTANT', constant_values=0)
             return im_padded, npad
 
         def extract_crops(im, npad, topleft, bottomright):
@@ -157,27 +168,20 @@ class InferenceWrapper():
             # crops = tf.expand_dims(crop, axis=0)
             return crop
 
+        image_cropped = []
         for factor in search_factors:
             s_x = factor * base_s_x
             frame_sz = tf.to_int32(frame_sz[0:2])
             topleft = target_yx - get_center(s_x)
             bottomright = target_yx + get_center(s_x)
-            # box = tf.concat([topleft, bottomright], axis=0)
+
             image_crop, npad = pad_frame(image_minus_avg, frame_sz, topleft, bottomright)
             image_crop = extract_crops(image_crop, npad, topleft, bottomright)
-            # image_crop = tf.expand_dims(image_crop, axis=0)
             image_crop = tf.image.resize_images(image_crop, [size_x, size_x], method=tf.image.ResizeMethod.BILINEAR)
-
             image_cropped.append(image_crop)
-            # self.debug = box
-            # image_cropped.append(image_crop[1:3])
-            # boxes.append(box)
-        # boxes = tf.stack(boxes)
+
         image_cropped = tf.stack(image_cropped)
 
-        # image_cropped = tf.image.crop_and_resize(image_minus_avg, boxes,
-        #                                          box_ind=tf.zeros((track_config['num_scales']), tf.int32),
-        #                                          crop_size=[size_x, size_x])
         scale_xs = []
         for factor in search_factors:
             scale_x = base_scale_x / factor
