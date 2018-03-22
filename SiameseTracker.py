@@ -28,13 +28,15 @@ from utils.misc_utils import auto_select_gpu, mkdir_p, load_cfgs
 
 
 class SiameseTracker:
-    def __init__(self):
-        checkpoint = 'SiamFC/Logs/SiamFC/track_model_checkpoints/SiamFC-3s-color-pretrained'
+    def __init__(self, debug=0):
+        checkpoint = 'Logs/SiamFC/track_model_checkpoints/SiamFC-3s-color-pretrained'
         os.environ['CUDA_VISIBLE_DEVICES'] = auto_select_gpu()
+
+        # run only on cpu
         # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
         model_config, _, track_config = load_cfgs(checkpoint)
-        track_config['log_level'] = 1
+        track_config['log_level'] = debug
 
         g = tf.Graph()
         with g.as_default():
@@ -51,7 +53,7 @@ class SiameseTracker:
         # sess.run(tf.global_variables_initializer())
         restore_fn(sess)
         tracker = Tracker(model, model_config=model_config, track_config=track_config)
-        video_name = "Camera"
+        video_name = "demo"
         video_log_dir = osp.join(track_config['log_dir'], video_name)
         mkdir_p(video_log_dir)
         self.tracker = tracker
@@ -67,11 +69,4 @@ class SiameseTracker:
 
     def track(self, frame):
         reported_bbox = self.tracker.track(self.sess, frame)
-        # print(reported_bbox)
-        # print(reported_bbox[1])
-        # cv2.rectangle(frame, (int(reported_bbox[0]), int(reported_bbox[1])),
-        #               (
-        #                   int(reported_bbox[0]) + int(reported_bbox[2]),
-        #                   int(reported_bbox[1]) + int(reported_bbox[3])),
-        #               (0, 0, 255), 2)
         return reported_bbox
