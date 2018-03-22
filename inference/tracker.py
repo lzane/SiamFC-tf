@@ -11,7 +11,9 @@ from __future__ import division
 from __future__ import print_function
 
 import logging
+import os.path as osp
 
+import cv2
 import numpy as np
 
 from utils.infer_utils import convert_bbox_format, Rectangle
@@ -49,6 +51,8 @@ class Tracker(object):
         self.original_target_width = None
         self.search_center = None
         self.current_target_state = None
+        self.logdir = None
+        self.frame_cnt = 0
 
     def initialize(self, sess, first_bbox, frame, logdir='/tmp'):
         """Runs tracking on a single image sequence."""
@@ -68,6 +72,8 @@ class Tracker(object):
         self.current_target_state = TargetState(bbox=bbox,
                                                 search_pos=self.search_center,
                                                 scale_idx=int(get_center(self.num_scales)))
+        self.logdir = logdir
+        self.frame_cnt = 0
 
     def track(self, sess, frame):
         bbox_feed = [self.current_target_state.bbox.y, self.current_target_state.bbox.x,
@@ -147,4 +153,36 @@ class Tracker(object):
             'target position in feature space should be no larger than input image size'
 
         reported_bbox = convert_bbox_format(self.current_target_state.bbox, 'top-left-based')
+
+        self.frame_cnt += 1
+        if self.log_level > 0:
+            np.save(osp.join(self.logdir, 'num_frames.npy'), [self.frame_cnt])
+
+            # Select the image with the highest score scale and convert it to uint8
+            image_cropped = outputs['image_cropped'][best_scale].astype(np.uint8)
+            # Note that imwrite in cv2 assumes the image is in BGR format.
+            # However, the cropped image returned by TensorFlow is RGB.
+            # Therefore, we convert color format using cv2.cvtColor
+            cv2.imwrite(osp.join(self.logdir, 'image_cropped{}.jpg'.format(self.frame_cnt)),
+                    cv2.cvtColor(image_cropped, cv2.COLOR_RGB2BGR))
+            cv2.imwrite(osp.join(self.logdir, 'image_origin{}.jpg'.format(self.frame_cnt)),
+                        cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+
+
+            np.save(osp.join(self.logdir, 'best_scale{}.npy'.format(self.frame_cnt)), [best_scale])
+            np.save(osp.join(self.logdir, 'response{}.npy'.format(self.frame_cnt)), response)
+
+            y_search, x_search = self.current_target_state.search_pos
+            search_scale = search_scale_list[best_scale]
+            target_height_search = height * search_scale
+            target_width_search = width * search_scale
+            bbox_search = Rectangle(x_search, y_search, target_width_search, target_height_search)
+            bbox_search = convert_bbox_format(bbox_search, 'top-left-based')
+            np.save(osp.join(self.logdir, 'bbox{}.npy'.format(self.frame_cnt)),
+                    [bbox_search.x, bbox_search.y, bbox_search.width, bbox_search.height])
+            with open(osp.join(self.logdir, 'track_rect.txt'), 'a') as f:
+                rect_str = '{},{},{},{}\n'.format(int(reported_bbox[0]), int(reported_bbox[1]),
+                                                  int(reported_bbox[2]), int(reported_bbox[3]))
+                f.write(rect_str)
+
         return reported_bbox
