@@ -42,26 +42,24 @@ def set_bbox(artist, bbox):
 
 @ex.config
 def configs():
-  videoname = 'KiteSurf'
+  videoname = 'demo'
   runname = 'SiamFC-3s-color-pretrained'
-  data_dir = 'assets/'
   track_log_dir = 'Logs/SiamFC/track_model_inference/{}/{}'.format(runname, videoname)
 
 
 @ex.automain
-def main(videoname, data_dir, track_log_dir):
+def main(videoname, track_log_dir):
   track_log_dir = osp.join(track_log_dir)
-  video_data_dir = osp.join(data_dir, videoname)
   te_bboxs = readbbox(osp.join(track_log_dir, 'track_rect.txt'))
-  gt_bboxs = readbbox(osp.join(video_data_dir, 'groundtruth_rect.txt'))
-  num_frames = len(gt_bboxs)
+  # gt_bboxs = readbbox(osp.join(video_data_dir, 'groundtruth_rect.txt'))
+  num_frames = len(te_bboxs)
 
   def redraw_fn(ind, axes):
     ind += 1
     input_ = imread(osp.join(track_log_dir, 'image_cropped{}.jpg'.format(ind)))
     response = np.load(osp.join(track_log_dir, 'response{}.npy'.format(ind)))
-    org_img = imread(osp.join(data_dir, videoname, 'img', '{:04d}.jpg'.format(ind + 1)))
-    gt_bbox = gt_bboxs[ind]
+    org_img = imread(osp.join(track_log_dir, 'image_origin{}.jpg'.format(ind)))
+    # gt_bbox = gt_bboxs[ind]
     te_bbox = te_bboxs[ind]
 
     bbox = np.load(osp.join(track_log_dir, 'bbox{}.npy'.format(ind)))
@@ -73,11 +71,11 @@ def main(videoname, data_dir, track_log_dir):
       redraw_fn.im3 = ax3.imshow(org_img)
 
       redraw_fn.bb1 = create_bbox(bbox, color='red')
-      redraw_fn.bb2 = create_bbox(gt_bbox, color='green')
+      # redraw_fn.bb2 = create_bbox(gt_bbox, color='green')
       redraw_fn.bb3 = create_bbox(te_bbox, color='red')
 
       ax1.add_patch(redraw_fn.bb1)
-      ax3.add_patch(redraw_fn.bb2)
+      # ax3.add_patch(redraw_fn.bb2)
       ax3.add_patch(redraw_fn.bb3)
 
       redraw_fn.text = ax3.text(0.03, 0.97, 'F:{}'.format(ind), fontdict={'size': 10, },
@@ -91,7 +89,7 @@ def main(videoname, data_dir, track_log_dir):
       redraw_fn.im2.set_array(response)
       redraw_fn.im3.set_array(org_img)
       set_bbox(redraw_fn.bb1, bbox)
-      set_bbox(redraw_fn.bb2, gt_bbox)
+      # set_bbox(redraw_fn.bb2, gt_bbox)
       set_bbox(redraw_fn.bb3, te_bbox)
       redraw_fn.text.set_text('F: {}'.format(ind))
 
