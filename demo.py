@@ -58,6 +58,7 @@ def main():
 
     # select ROI and initialize the model
     r = cv2.selectROI(postprocess(frame))
+    cv2.destroyWindow("ROI selector")
     print('ROI:', r)
     tracker.set_first_frame(frame, r)
 
