@@ -24,7 +24,7 @@ basic usage:
 ```
 # debug = 0 , no log will produce
 # debug = 1 , will produce log file
-tracker = SiameseTracker(debug=1)
+tracker = SiameseTracker(debug=0)
 
 # set the first frame
 tracker.set_first_frame(frame, r)
@@ -33,6 +33,12 @@ while True:
     ...
     output_bbox = tracker.track(new_frame)
 ```
+
+## save result into a video file
+
+- run tracking which debug flag set to 1
+- run `python3 scripts/save_result_to_video.py`
+- a video file will appear in the root of the project
 
 
 --------

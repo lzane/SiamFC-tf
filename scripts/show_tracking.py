@@ -48,7 +48,7 @@ def configs():
 
 
 @ex.automain
-def main(videoname, track_log_dir):
+def main(track_log_dir):
   track_log_dir = osp.join(track_log_dir)
   te_bboxs = readbbox(osp.join(track_log_dir, 'track_rect.txt'))
   # gt_bboxs = readbbox(osp.join(video_data_dir, 'groundtruth_rect.txt'))
