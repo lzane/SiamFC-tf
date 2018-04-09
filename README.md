@@ -1,6 +1,43 @@
 # SiamFC-TensorFlow
 A TensorFlow implementation of the SiamFC tracker
 
+## Use with your own camera or video
+
+Use with your camera
+```
+python3 demo.py cam
+```
+
+Use with your own video
+```
+python3 demo.py [video path]
+```
+
+When the video begin to play
+- press `o` to select ROI
+- press `q` to end the program
+
+## Use in your project
+
+Please refer the `SiameseTracker.py` file
+basic usage:
+```
+# debug = 0 , no log will produce
+# debug = 1 , will produce log file
+tracker = SiameseTracker(debug=1)
+
+# set the first frame
+tracker.set_first_frame(frame, r)
+
+while True:
+    ...
+    output_bbox = tracker.track(new_frame)
+```
+
+
+--------
+Original README
+
 ## Introduction
 
 This is a TensorFlow implementation of [Fully-Convolutional Siamese Networks for Object Tracking](https://arxiv.org/abs/1606.09549). You can find the original MatConvNet version [here](https://github.com/bertinetto/siamese-fc). The SiamFC authors have also  released a TensorFlow port of the tracking part (using pretrained model only) in [here](https://github.com/torrvision/siamfc-tf). 
