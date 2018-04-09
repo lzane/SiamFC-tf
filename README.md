@@ -1,8 +1,9 @@
 # SiamFC-TensorFlow
 A TensorFlow implementation of the SiamFC tracker
+
 you can try with your own camera and video, or even integrate it into your project :)
 
-[](https://i.loli.net/2018/04/09/5acb4df1cd545.gif)
+![](https://i.loli.net/2018/04/09/5acb4df1cd545.gif)
 
 ## Use with your own camera or video
 
