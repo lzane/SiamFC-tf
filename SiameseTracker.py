@@ -47,9 +47,6 @@ class SiameseTracker:
         if not osp.isdir(track_config['log_dir']):
             logging.info('Creating inference directory: %s', track_config['log_dir'])
             mkdir_p(track_config['log_dir'])
-        else:
-            rmdir(track_config['log_dir'])
-            mkdir_p(track_config['log_dir'])
 
 
         gpu_options = tf.GPUOptions(allow_growth=True)
@@ -60,6 +57,7 @@ class SiameseTracker:
         tracker = Tracker(model, model_config=model_config, track_config=track_config)
         video_name = "demo"
         video_log_dir = osp.join(track_config['log_dir'], video_name)
+        rmdir(video_log_dir)
         mkdir_p(video_log_dir)
         self.tracker = tracker
         self.sess = sess
