@@ -24,7 +24,7 @@ sys.path.append(CURRENT_DIR)
 from inference import inference_wrapper
 from inference.tracker import Tracker
 from utils.infer_utils import Rectangle
-from utils.misc_utils import auto_select_gpu, mkdir_p, load_cfgs
+from utils.misc_utils import auto_select_gpu, mkdir_p, load_cfgs, rmdir
 
 
 class SiameseTracker:
@@ -47,6 +47,10 @@ class SiameseTracker:
         if not osp.isdir(track_config['log_dir']):
             logging.info('Creating inference directory: %s', track_config['log_dir'])
             mkdir_p(track_config['log_dir'])
+        else:
+            rmdir(track_config['log_dir'])
+            mkdir_p(track_config['log_dir'])
+
 
         gpu_options = tf.GPUOptions(allow_growth=True)
         sess_config = tf.ConfigProto(gpu_options=gpu_options)

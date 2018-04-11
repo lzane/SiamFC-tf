@@ -36,7 +36,7 @@ def postprocess(img):
 def main():
     # debug = 0 , no log will produce
     # debug = 1 , will produce log file
-    tracker = SiameseTracker(debug=1)
+    tracker = SiameseTracker(debug=0)
     time_per_frame = 0
 
     if len(sys.argv) <= 1:
@@ -53,7 +53,7 @@ def main():
         ret, frame = cap.read()
         frame = preprocess(frame)
         cv2.imshow('frame', postprocess(frame))
-        if cv2.waitKey(1) & 0xFF == ord('o'):
+        if cv2.waitKey(1500) & 0xFF == ord('o'):
             break
 
     # select ROI and initialize the model
@@ -63,10 +63,11 @@ def main():
     tracker.set_first_frame(frame, r)
 
     while True:
-        start_time = datetime.datetime.now()
         ret, frame = cap.read()
         frame = preprocess(frame)
+        start_time = datetime.datetime.now()
         reported_bbox = tracker.track(frame)
+        end_time = datetime.datetime.now()
 
         # Display the resulting frame
         # print(reported_bbox)
@@ -76,7 +77,6 @@ def main():
                           int(reported_bbox[1]) + int(reported_bbox[3])),
                       (0, 0, 255), 2)
 
-        end_time = datetime.datetime.now()
         duration = end_time - start_time
         time_per_frame = 0.9 * time_per_frame + 0.1 * duration.microseconds
         cv2.putText(frame, 'FPS ' + str(round(1e6 / time_per_frame, 1)),
